@@ -26,6 +26,11 @@ def post_purchase_order(payload: PurchaseOrderCreate) -> dict:
     return supply_service.create_purchase_order(payload)
 
 
+@router.get("/purchase-orders/{order_id}/available-actions")
+def get_purchase_available_actions(order_id: str) -> dict:
+    return supply_service.get_purchase_order_available_actions(order_id)
+
+
 @router.patch("/purchase-orders/{order_id}/status", response_model=PurchaseOrder)
 def patch_purchase_status(order_id: str, payload: PurchaseStatusUpdate) -> dict:
     return supply_service.update_purchase_status(order_id, payload.status)

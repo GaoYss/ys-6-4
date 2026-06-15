@@ -1,7 +1,27 @@
 import { useMemo, useState } from 'react'
-import { CheckCircle2, PackagePlus } from 'lucide-react'
+import { CheckCircle2, PackagePlus, XCircle, Info } from 'lucide-react'
 import { api } from '../api/client.js'
 import { StatusBadge } from '../components/StatusBadge.jsx'
+
+const STATUS_ACTIONS = {
+  draft: [
+    { status: 'ordered', label: '下单', icon: PackagePlus, variant: 'primary' },
+    { status: 'cancelled', label: '取消', icon: XCircle, variant: 'danger' },
+  ],
+  ordered: [
+    { status: 'received', label: '入库', icon: CheckCircle2, variant: 'primary' },
+    { status: 'cancelled', label: '取消', icon: XCircle, variant: 'danger' },
+  ],
+  received: [],
+  cancelled: [],
+}
+
+const STATUS_TIPS = {
+  draft: '草稿状态，可下单或取消',
+  ordered: '已下单，待收货入库',
+  received: '已完成收货入库，库存已更新',
+  cancelled: '订单已取消，不可再操作',
+}
 
 export function Supply({ ingredients, suppliers, purchaseOrders, refresh }) {
   const [form, setForm] = useState({
@@ -36,10 +56,16 @@ export function Supply({ ingredients, suppliers, purchaseOrders, refresh }) {
     refresh()
   }
 
-  const receive = async (order) => {
-    await api.updatePurchaseStatus(order.id, 'received')
-    refresh()
+  const updateStatus = async (order, targetStatus) => {
+    try {
+      await api.updatePurchaseStatus(order.id, targetStatus)
+      refresh()
+    } catch (err) {
+      alert(err.message)
+    }
   }
+
+  const availableActions = (status) => STATUS_ACTIONS[status] || []
 
   return (
     <div className="page-grid">
@@ -91,12 +117,26 @@ export function Supply({ ingredients, suppliers, purchaseOrders, refresh }) {
                 <div className="order-side">
                   <b>¥{order.total_amount}</b>
                   <StatusBadge value={order.status} />
-                  {order.status !== 'received' && (
-                    <button type="button" onClick={() => receive(order)}>
-                      <CheckCircle2 size={15} />
-                      入库
-                    </button>
-                  )}
+                  <div className="order-actions">
+                    {availableActions(order.status).map((action) => {
+                      const Icon = action.icon
+                      return (
+                        <button
+                          key={action.status}
+                          type="button"
+                          className={action.variant === 'danger' ? 'danger-btn' : ''}
+                          onClick={() => updateStatus(order, action.status)}
+                        >
+                          <Icon size={15} />
+                          {action.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <div className="order-tip">
+                    <Info size={12} />
+                    <span>{STATUS_TIPS[order.status] || '未知状态'}</span>
+                  </div>
                 </div>
               </div>
             ))}

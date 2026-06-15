@@ -357,7 +357,37 @@ textarea {
   display: grid;
   gap: 7px;
   justify-items: end;
-  min-width: 112px;
+  min-width: 140px;
+}
+
+.order-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.order-actions button {
+  min-height: 30px;
+  padding: 5px 8px;
+  font-size: 13px;
+}
+
+.danger-btn {
+  color: #a23b2d;
+  border-color: #e2c6c0;
+  background: #fff;
+}
+
+.danger-btn:hover {
+  border-color: #c78a7f;
+  background: #fdf5f3;
+}
+
+.order-tip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #7a867d;
+  font-size: 12px;
 }
 
 .status {
