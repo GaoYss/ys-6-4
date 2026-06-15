@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { CheckCircle2, PackagePlus, XCircle, Info } from 'lucide-react'
+import { CheckCircle2, PackagePlus, XCircle, Info, X } from 'lucide-react'
 import { api } from '../api/client.js'
 import { StatusBadge } from '../components/StatusBadge.jsx'
 
@@ -23,6 +23,8 @@ function buildTipText(order) {
 }
 
 export function Supply({ ingredients, suppliers, purchaseOrders, refresh }) {
+  const [errorMessage, setErrorMessage] = useState(null)
+
   const [form, setForm] = useState({
     supplier_id: '',
     ingredient_id: '',
@@ -41,31 +43,51 @@ export function Supply({ ingredients, suppliers, purchaseOrders, refresh }) {
 
   const submit = async (event) => {
     event.preventDefault()
-    await api.createPurchaseOrder({
-      supplier_id: form.supplier_id,
-      expected_arrival: form.expected_arrival,
-      remark: form.remark,
-      items: [{
-        ingredient_id: form.ingredient_id,
-        qty: Number(form.qty),
-        unit_price: Number(form.unit_price),
-      }],
-    })
-    setForm((current) => ({ ...current, ingredient_id: '', qty: '', unit_price: '', remark: '' }))
-    refresh()
+    setErrorMessage(null)
+    try {
+      await api.createPurchaseOrder({
+        supplier_id: form.supplier_id,
+        expected_arrival: form.expected_arrival,
+        remark: form.remark,
+        items: [{
+          ingredient_id: form.ingredient_id,
+          qty: Number(form.qty),
+          unit_price: Number(form.unit_price),
+        }],
+      })
+      setForm((current) => ({ ...current, ingredient_id: '', qty: '', unit_price: '', remark: '' }))
+      refresh()
+    } catch (err) {
+      setErrorMessage(err.message || '创建采购单失败')
+    }
   }
 
   const updateStatus = async (order, targetStatus) => {
+    setErrorMessage(null)
     try {
       await api.updatePurchaseStatus(order.id, targetStatus)
       refresh()
     } catch (err) {
-      alert(err.message)
+      setErrorMessage(err.message || '操作失败')
     }
   }
 
   return (
     <div className="page-grid">
+      {errorMessage && (
+        <div className="notice error">
+          <span>{errorMessage}</span>
+          <button
+            type="button"
+            className="icon-only"
+            onClick={() => setErrorMessage(null)}
+            aria-label="关闭提示"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       <section className="panel">
         <div className="section-title">
           <h2>原料库存</h2>
@@ -113,7 +135,7 @@ export function Supply({ ingredients, suppliers, purchaseOrders, refresh }) {
                 </div>
                 <div className="order-side">
                   <b>¥{order.total_amount}</b>
-                  <StatusBadge value={order.status} />
+                  <StatusBadge value={order.status} label={order.current_status_label} />
                   <div className="order-actions">
                     {(order.available_actions || []).map((action) => {
                       const Icon = ACTION_ICON_MAP[action.status] || PackagePlus

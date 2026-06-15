@@ -8,7 +8,8 @@ const labelMap = {
   cancelled: '已取消',
 }
 
-export function StatusBadge({ value }) {
-  return <span className={`status status-${value}`}>{labelMap[value] || value}</span>
+export function StatusBadge({ value, label }) {
+  const displayLabel = label !== undefined ? label : (labelMap[value] || value)
+  return <span className={`status status-${value}`}>{displayLabel}</span>
 }
 

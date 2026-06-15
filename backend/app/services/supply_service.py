@@ -13,7 +13,7 @@ STATUS_TRANSITIONS = {
 STATUS_LABELS = {
     "draft": "草稿",
     "ordered": "已下单",
-    "received": "已收货",
+    "received": "已入库",
     "cancelled": "已取消",
 }
 
@@ -33,9 +33,14 @@ def validate_status_transition(current_status: str, target_status: str) -> None:
     if target_status not in allowed:
         current_label = STATUS_LABELS.get(current_status, current_status)
         target_label = STATUS_LABELS.get(target_status, target_status)
+        if allowed:
+            action_labels = "、".join(f"「{ACTION_LABELS.get(a, a)}」" for a in allowed)
+            msg = f"无法将「{current_label}」订单变更为「{target_label}」。当前状态可执行：{action_labels}"
+        else:
+            msg = f"无法将「{current_label}」订单变更为「{target_label}」。「{current_label}」状态为终态，不可再执行任何操作"
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"状态流转非法：无法从「{current_label}」变为「{target_label}」",
+            detail=msg,
         )
 
 
