@@ -33,10 +33,20 @@ class PurchaseOrderCreate(BaseModel):
     remark: str = Field(default="", max_length=240)
 
 
+class AvailableAction(BaseModel):
+    status: str
+    label: str
+
+
 class PurchaseOrder(PurchaseOrderCreate):
     id: str
     status: str
     total_amount: float
+
+
+class PurchaseOrderWithActions(PurchaseOrder):
+    current_status_label: str
+    available_actions: list[AvailableAction]
 
 
 class PurchaseStatusUpdate(BaseModel):

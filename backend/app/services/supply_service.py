@@ -39,6 +39,22 @@ def validate_status_transition(current_status: str, target_status: str) -> None:
         )
 
 
+def _enrich_order(order: dict) -> dict:
+    current_status = order["status"]
+    available = get_available_actions(current_status)
+    return {
+        **order,
+        "current_status_label": STATUS_LABELS.get(current_status, current_status),
+        "available_actions": [
+            {
+                "status": action,
+                "label": ACTION_LABELS.get(action, action),
+            }
+            for action in available
+        ],
+    }
+
+
 def list_ingredients() -> list[dict]:
     return list(store.ingredients.values())
 
@@ -48,7 +64,7 @@ def list_suppliers() -> list[dict]:
 
 
 def list_purchase_orders() -> list[dict]:
-    return list(store.purchase_orders.values())
+    return [_enrich_order(order) for order in store.purchase_orders.values()]
 
 
 def create_purchase_order(payload: PurchaseOrderCreate) -> dict:
@@ -68,7 +84,7 @@ def create_purchase_order(payload: PurchaseOrderCreate) -> dict:
         "total_amount": round(total, 2),
     }
     store.purchase_orders[order["id"]] = order
-    return order
+    return _enrich_order(order)
 
 
 def update_purchase_status(order_id: str, status_value: str) -> dict:
@@ -85,7 +101,7 @@ def update_purchase_status(order_id: str, status_value: str) -> dict:
             ingredient = store.ingredients[item["ingredient_id"]]
             ingredient["stock_qty"] = round(ingredient["stock_qty"] + item["qty"], 2)
             ingredient["avg_price"] = round(item["unit_price"], 2)
-    return order
+    return _enrich_order(order)
 
 
 def get_purchase_order_available_actions(order_id: str) -> dict:

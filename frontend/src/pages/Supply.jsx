@@ -3,24 +3,23 @@ import { CheckCircle2, PackagePlus, XCircle, Info } from 'lucide-react'
 import { api } from '../api/client.js'
 import { StatusBadge } from '../components/StatusBadge.jsx'
 
-const STATUS_ACTIONS = {
-  draft: [
-    { status: 'ordered', label: '下单', icon: PackagePlus, variant: 'primary' },
-    { status: 'cancelled', label: '取消', icon: XCircle, variant: 'danger' },
-  ],
-  ordered: [
-    { status: 'received', label: '入库', icon: CheckCircle2, variant: 'primary' },
-    { status: 'cancelled', label: '取消', icon: XCircle, variant: 'danger' },
-  ],
-  received: [],
-  cancelled: [],
+const ACTION_ICON_MAP = {
+  ordered: PackagePlus,
+  received: CheckCircle2,
+  cancelled: XCircle,
 }
 
-const STATUS_TIPS = {
-  draft: '草稿状态，可下单或取消',
-  ordered: '已下单，待收货入库',
-  received: '已完成收货入库，库存已更新',
-  cancelled: '订单已取消，不可再操作',
+const ACTION_VARIANT = {
+  cancelled: 'danger',
+}
+
+function buildTipText(order) {
+  const label = order.current_status_label || order.status
+  const actions = order.available_actions || []
+  if (actions.length === 0) {
+    return `当前状态：${label}，无可执行操作`
+  }
+  return `当前状态：${label}，可执行「${actions.map((a) => a.label).join('」「')}」`
 }
 
 export function Supply({ ingredients, suppliers, purchaseOrders, refresh }) {
@@ -64,8 +63,6 @@ export function Supply({ ingredients, suppliers, purchaseOrders, refresh }) {
       alert(err.message)
     }
   }
-
-  const availableActions = (status) => STATUS_ACTIONS[status] || []
 
   return (
     <div className="page-grid">
@@ -118,13 +115,14 @@ export function Supply({ ingredients, suppliers, purchaseOrders, refresh }) {
                   <b>¥{order.total_amount}</b>
                   <StatusBadge value={order.status} />
                   <div className="order-actions">
-                    {availableActions(order.status).map((action) => {
-                      const Icon = action.icon
+                    {(order.available_actions || []).map((action) => {
+                      const Icon = ACTION_ICON_MAP[action.status] || PackagePlus
+                      const variant = ACTION_VARIANT[action.status]
                       return (
                         <button
                           key={action.status}
                           type="button"
-                          className={action.variant === 'danger' ? 'danger-btn' : ''}
+                          className={variant === 'danger' ? 'danger-btn' : ''}
                           onClick={() => updateStatus(order, action.status)}
                         >
                           <Icon size={15} />
@@ -135,7 +133,7 @@ export function Supply({ ingredients, suppliers, purchaseOrders, refresh }) {
                   </div>
                   <div className="order-tip">
                     <Info size={12} />
-                    <span>{STATUS_TIPS[order.status] || '未知状态'}</span>
+                    <span>{buildTipText(order)}</span>
                   </div>
                 </div>
               </div>
