@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { CheckCircle2, PackagePlus, XCircle, Info, X } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { CheckCircle2, PackagePlus, XCircle, Info, X, Check } from 'lucide-react'
 import { api } from '../api/client.js'
 import { StatusBadge } from '../components/StatusBadge.jsx'
 
@@ -13,6 +13,8 @@ const ACTION_VARIANT = {
   cancelled: 'danger',
 }
 
+const AUTO_DISMISS_MS = 3500
+
 function buildTipText(order) {
   const label = order.current_status_label || order.status
   const actions = order.available_actions || []
@@ -22,8 +24,55 @@ function buildTipText(order) {
   return `当前状态：${label}，可执行「${actions.map((a) => a.label).join('」「')}」`
 }
 
+function buildSuccessMessage(targetStatus) {
+  if (targetStatus === 'ordered') return '采购单已提交'
+  if (targetStatus === 'received') return '入库收货成功'
+  if (targetStatus === 'cancelled') return '订单已取消'
+  return '操作成功'
+}
+
 export function Supply({ ingredients, suppliers, purchaseOrders, refresh }) {
   const [errorMessage, setErrorMessage] = useState(null)
+  const [successMessage, setSuccessMessage] = useState(null)
+  const errorTimerRef = useRef(null)
+  const successTimerRef = useRef(null)
+
+  useEffect(() => {
+    return () => {
+      if (errorTimerRef.current) clearTimeout(errorTimerRef.current)
+      if (successTimerRef.current) clearTimeout(successTimerRef.current)
+    }
+  }, [])
+
+  const dismissError = () => {
+    if (errorTimerRef.current) {
+      clearTimeout(errorTimerRef.current)
+      errorTimerRef.current = null
+    }
+    setErrorMessage(null)
+  }
+
+  const dismissSuccess = () => {
+    if (successTimerRef.current) {
+      clearTimeout(successTimerRef.current)
+      successTimerRef.current = null
+    }
+    setSuccessMessage(null)
+  }
+
+  const showError = (msg) => {
+    dismissSuccess()
+    setErrorMessage(msg)
+    if (errorTimerRef.current) clearTimeout(errorTimerRef.current)
+    errorTimerRef.current = setTimeout(dismissError, AUTO_DISMISS_MS)
+  }
+
+  const showSuccess = (msg) => {
+    dismissError()
+    setSuccessMessage(msg)
+    if (successTimerRef.current) clearTimeout(successTimerRef.current)
+    successTimerRef.current = setTimeout(dismissSuccess, AUTO_DISMISS_MS)
+  }
 
   const [form, setForm] = useState({
     supplier_id: '',
@@ -43,7 +92,8 @@ export function Supply({ ingredients, suppliers, purchaseOrders, refresh }) {
 
   const submit = async (event) => {
     event.preventDefault()
-    setErrorMessage(null)
+    dismissError()
+    dismissSuccess()
     try {
       await api.createPurchaseOrder({
         supplier_id: form.supplier_id,
@@ -56,31 +106,49 @@ export function Supply({ ingredients, suppliers, purchaseOrders, refresh }) {
         }],
       })
       setForm((current) => ({ ...current, ingredient_id: '', qty: '', unit_price: '', remark: '' }))
+      showSuccess('采购单创建成功')
       refresh()
     } catch (err) {
-      setErrorMessage(err.message || '创建采购单失败')
+      showError(err.message || '创建采购单失败')
     }
   }
 
   const updateStatus = async (order, targetStatus) => {
-    setErrorMessage(null)
+    dismissError()
+    dismissSuccess()
     try {
       await api.updatePurchaseStatus(order.id, targetStatus)
+      showSuccess(buildSuccessMessage(targetStatus))
       refresh()
     } catch (err) {
-      setErrorMessage(err.message || '操作失败')
+      showError(err.message || '操作失败')
     }
   }
 
   return (
     <div className="page-grid">
+      {successMessage && (
+        <div className="notice success">
+          <Check size={16} />
+          <span>{successMessage}</span>
+          <button
+            type="button"
+            className="icon-only"
+            onClick={dismissSuccess}
+            aria-label="关闭提示"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       {errorMessage && (
         <div className="notice error">
           <span>{errorMessage}</span>
           <button
             type="button"
             className="icon-only"
-            onClick={() => setErrorMessage(null)}
+            onClick={dismissError}
             aria-label="关闭提示"
           >
             <X size={14} />

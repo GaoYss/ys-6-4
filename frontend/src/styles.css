@@ -491,6 +491,12 @@ textarea {
   padding: 10px 12px;
 }
 
+.notice.success {
+  color: #1c6b47;
+  background: #e2f4e8;
+  border: 1px solid #b6dec1;
+}
+
 .notice.error {
   color: #913123;
   background: #fde9e5;
